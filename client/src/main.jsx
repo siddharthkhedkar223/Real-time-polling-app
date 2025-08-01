@@ -64,7 +64,11 @@ function PollingApp() {
   useEffect(() => {
     if (userRole) {
       setConnectionStatus('connecting')
-      const newSocket = io('http://localhost:5000', {
+      const socketUrl = import.meta.env.VITE_SOCKET_URL || 
+  (import.meta.env.PROD ? 
+    'https://real-time-polling-app-production-ff8b.up.railway.app' : 
+    'http://localhost:5000');
+      const newSocket = io(socketUrl, {
         transports: ['websocket', 'polling'],
         timeout: 20000,
         forceNew: true
@@ -1498,3 +1502,4 @@ function PollingApp() {
 
 // Mount the app
 ReactDOM.createRoot(document.getElementById('root')).render(<PollingApp />)
+
