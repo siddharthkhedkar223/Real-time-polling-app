@@ -114,7 +114,7 @@ intervue_Assignment/
 4. **Responsive**: Works on all device sizes
 5. **Reliable**: Graceful fallbacks for connection issues
 
-## 📝 Assignment Features Implemented
+## 📝 Features Implemented
 
 ✅ Teacher can create polls with multiple options  
 ✅ Students see polls automatically (no ID needed)  
@@ -125,26 +125,6 @@ intervue_Assignment/
 ✅ Live connection status  
 ✅ Responsive design  
 
-## 🚀 Production Deployment
 
-For production deployment:
 
-1. Update CORS settings in `server/server.js`
-2. Set production Socket.IO origins
-3. Build client: `npm run build`
-4. Deploy both client and server
-5. Update Socket.IO connection URL in client
-
-## 💡 Future Enhancements
-
-- User authentication
-- Poll history and analytics
-- Multiple poll types (text, images)
-- Poll scheduling
-- Export results
-- Mobile app version
-
----
-
-**Ready for your assignment! 🎯**
 
