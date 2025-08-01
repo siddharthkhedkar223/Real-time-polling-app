@@ -96,8 +96,6 @@ intervue_Assignment/
 │   │   └── memoryStore.js   # In-memory data storage
 │   ├── server.js            # Express server with Socket.IO
 │   └── package.json
-├── start-servers.bat        # Windows batch script to start both servers
-├── start-servers.ps1        # PowerShell script to start both servers
 └── README.md
 ```
 
@@ -149,3 +147,4 @@ For production deployment:
 ---
 
 **Ready for your assignment! 🎯**
+
