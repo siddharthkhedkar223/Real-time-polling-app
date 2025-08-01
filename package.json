@@ -8,9 +8,18 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd server && npm run dev",
     "client": "cd client && npm run dev",
-    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build": "npm run install-all",
+    "railway-start": "npm run install-all && npm start"
   },
+  "keywords": ["polling", "real-time", "socket.io", "react", "express"],
+  "author": "Your Name",
+  "license": "MIT",
   "devDependencies": {
-    "concurrently": "^9.2.0"
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   }
 }
