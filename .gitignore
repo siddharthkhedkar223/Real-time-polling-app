@@ -61,11 +61,11 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env
+
 
 # Vite
 .vite/
 
 # Personal files
 *.pdf
+
