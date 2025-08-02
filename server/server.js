@@ -12,7 +12,7 @@ const server = http.createServer(app)
 const io = socketIo(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
-      ? ['https://your-frontend-domain.com'] 
+      ? ['https://real-time-polling-app-production-ff8b.up.railway.app/'] 
       : true,
     methods: ['GET', 'POST'],
     credentials: true
@@ -75,4 +75,5 @@ server.listen(PORT, () => {
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`)
   console.log(`📊 Polling App API is ready!`)
 })
+
 
