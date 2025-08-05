@@ -128,17 +128,41 @@ io.on('connection', (socket) => {
 if (IS_PRODUCTION) {
   // Make sure static files are served first, then fallback to index.html
   app.get('*', (req, res, next) => {
+    const fs = require('fs')
+    
     // If requesting a file extension, let express.static handle it
     if (req.path.includes('.')) {
       return next()
     }
-    // Otherwise serve the React app
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'), (err) => {
-      if (err) {
-        console.error('Error serving index.html:', err)
-        res.status(500).send('Error loading application')
+    
+    // Try to find index.html in the same paths we checked earlier
+    const possibleIndexPaths = [
+      path.join(__dirname, '../client/dist/index.html'),
+      path.join(__dirname, '../dist/index.html'),
+      path.join(process.cwd(), 'client/dist/index.html'),
+      path.join(process.cwd(), 'dist/index.html')
+    ]
+    
+    let indexPath = null
+    for (const testPath of possibleIndexPaths) {
+      if (fs.existsSync(testPath)) {
+        indexPath = testPath
+        break
       }
-    })
+    }
+    
+    if (indexPath) {
+      console.log(`📄 Serving index.html from: ${indexPath}`)
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          console.error('Error serving index.html:', err)
+          res.status(500).send('Error loading application')
+        }
+      })
+    } else {
+      console.error('❌ index.html not found in any location')
+      res.status(404).send('Application not found')
+    }
   })
 } else {
   // Basic route for testing in development
@@ -168,17 +192,4 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`📊 Polling App API is ready!`)
   console.log(`📁 Serving static files: ${IS_PRODUCTION ? 'YES' : 'NO'}`)
   console.log(`📍 Server accessible at: http://0.0.0.0:${PORT}`)
-  
-  // Additional Railway debugging
-  if (IS_PRODUCTION) {
-    const staticPath = path.join(__dirname, '../client/dist')
-    const indexPath = path.join(staticPath, 'index.html')
-    const fs = require('fs')
-    console.log(`📂 Checking static files...`)
-    console.log(`📁 Static directory exists: ${fs.existsSync(staticPath)}`)
-    console.log(`📄 Index.html exists: ${fs.existsSync(indexPath)}`)
-    if (fs.existsSync(staticPath)) {
-      console.log(`📋 Files in dist:`, fs.readdirSync(staticPath))
-    }
-  }
 })
