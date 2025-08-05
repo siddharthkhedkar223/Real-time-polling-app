@@ -67,6 +67,15 @@ if (IS_PRODUCTION) {
   }
 }
 
+const PORT = process.env.PORT || 5000
+
+// Log Railway environment variables for debugging
+console.log('🔧 Railway Environment Variables:')
+console.log('PORT:', process.env.PORT)
+console.log('NODE_ENV:', process.env.NODE_ENV)
+console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT)
+console.log('PWD:', process.env.PWD)
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   console.log('🩺 Health check requested')
@@ -223,15 +232,6 @@ app.use((err, req, res, next) => {
     message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   })
 })
-
-const PORT = process.env.PORT || 5000
-
-// Log Railway environment variables for debugging
-console.log('🔧 Railway Environment Variables:')
-console.log('PORT:', process.env.PORT)
-console.log('NODE_ENV:', process.env.NODE_ENV)
-console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT)
-console.log('PWD:', process.env.PWD)
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`)
