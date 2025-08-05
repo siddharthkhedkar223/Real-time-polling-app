@@ -9,7 +9,8 @@ const app = express()
 const server = http.createServer(app)
 
 // Production detection - Railway automatically sets NODE_ENV=production
-const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+// For Railway deployment, also check for PORT which Railway always sets
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.PORT !== undefined
 
 const io = socketIo(server, {
   cors: {
