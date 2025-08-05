@@ -69,17 +69,50 @@ if (IS_PRODUCTION) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() })
+  console.log('🩺 Health check requested')
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    environment: process.env.NODE_ENV,
+    isProduction: IS_PRODUCTION
+  })
 })
 
 // Railway health check endpoint
 app.get('/healthz', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() })
+  console.log('🩺 Railway health check requested')
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  })
 })
 
 // Railway ping endpoint
 app.get('/ping', (req, res) => {
-  res.send('pong')
+  console.log('🏓 Ping requested')
+  res.status(200).send('pong')
+})
+
+// Add root endpoint for Railway
+app.get('/', (req, res) => {
+  if (IS_PRODUCTION) {
+    // In production, this should be handled by the React fallback
+    // But if static files aren't working, show a debug message
+    res.status(200).json({
+      message: 'Polling App Server is running',
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      debug: 'If you see this, static files are not being served properly'
+    })
+  } else {
+    res.json({ 
+      message: 'Polling App API Server',
+      version: '1.0.0',
+      status: 'ready'
+    })
+  }
 })
 
 // Initialize Socket.IO handlers for polling
@@ -126,16 +159,21 @@ io.on('connection', (socket) => {
 
 // Serve React app for all non-API routes in production
 if (IS_PRODUCTION) {
-  // Make sure static files are served first, then fallback to index.html
+  // Serve static files first
   app.get('*', (req, res, next) => {
     const fs = require('fs')
     
-    // If requesting a file extension, let express.static handle it
+    // Skip API routes
+    if (req.path.startsWith('/health') || req.path.startsWith('/ping') || req.path.startsWith('/socket.io')) {
+      return next()
+    }
+    
+    // If requesting a file with extension, try to serve it as static
     if (req.path.includes('.')) {
       return next()
     }
     
-    // Try to find index.html in the same paths we checked earlier
+    // For all other routes, serve index.html (React app)
     const possibleIndexPaths = [
       path.join(__dirname, '../client/dist/index.html'),
       path.join(__dirname, '../dist/index.html'),
@@ -147,32 +185,34 @@ if (IS_PRODUCTION) {
     for (const testPath of possibleIndexPaths) {
       if (fs.existsSync(testPath)) {
         indexPath = testPath
+        console.log(`📄 Found index.html at: ${indexPath}`)
         break
       }
     }
     
     if (indexPath) {
-      console.log(`📄 Serving index.html from: ${indexPath}`)
+      console.log(`📄 Serving React app for route: ${req.path}`)
       res.sendFile(indexPath, (err) => {
         if (err) {
           console.error('Error serving index.html:', err)
-          res.status(500).send('Error loading application')
+          res.status(500).json({ 
+            error: 'Error loading application',
+            path: req.path,
+            indexPath: indexPath
+          })
         }
       })
     } else {
-      console.error('❌ index.html not found in any location')
-      res.status(404).send('Application not found')
+      console.error('❌ index.html not found, available paths checked:', possibleIndexPaths)
+      res.status(404).json({ 
+        error: 'Application files not found',
+        paths: possibleIndexPaths,
+        currentPath: req.path
+      })
     }
   })
 } else {
-  // Basic route for testing in development
-  app.get('/', (req, res) => {
-    res.json({ 
-      message: 'Polling App API Server',
-      version: '1.0.0',
-      status: 'ready'
-    })
-  })
+  // Development mode - remove this since we already have root handler above
 }
 
 // Error handling middleware
@@ -186,10 +226,32 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000
 
+// Log Railway environment variables for debugging
+console.log('🔧 Railway Environment Variables:')
+console.log('PORT:', process.env.PORT)
+console.log('NODE_ENV:', process.env.NODE_ENV)
+console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT)
+console.log('PWD:', process.env.PWD)
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`)
   console.log(`🌐 Environment: ${process.env.NODE_ENV}`)
   console.log(`📊 Polling App API is ready!`)
   console.log(`📁 Serving static files: ${IS_PRODUCTION ? 'YES' : 'NO'}`)
   console.log(`📍 Server accessible at: http://0.0.0.0:${PORT}`)
+  
+  // Test if server is actually listening
+  console.log('✅ Server successfully started and listening')
+}).on('error', (err) => {
+  console.error('❌ Server failed to start:', err)
+  process.exit(1)
+})
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('📴 SIGTERM received, shutting down gracefully')
+  server.close(() => {
+    console.log('📴 Server closed')
+    process.exit(0)
+  })
 })
