@@ -2,17 +2,19 @@ const express = require('express')
 const http = require('http')
 const socketIo = require('socket.io')
 const cors = require('cors')
+const path = require('path')
 require('dotenv').config()
 
-const apiRoutes = require('./routes/apiRoutes')
-const { initializeSocketHandlers } = require('./sockets/chatSocket')
+// Force production mode for testing static file serving
+// Railway sets NODE_ENV=production automatically, but for testing locally we need to detect
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT
 
 const app = express()
 const server = http.createServer(app)
 const io = socketIo(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? ['https://real-time-polling-app-production-ff8b.up.railway.app/'] 
+    origin: IS_PRODUCTION 
+      ? ['https://real-time-polling-app-production-ff8b.up.railway.app'] 
       : true,
     methods: ['GET', 'POST'],
     credentials: true
@@ -21,38 +23,80 @@ const io = socketIo(server, {
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://real-time-polling-app-production-ff8b.up.railway.app/'] 
+  origin: IS_PRODUCTION 
+    ? ['https://real-time-polling-app-production-ff8b.up.railway.app'] 
     : true,
   credentials: true
 }))
 app.use(express.json())
+
+// Serve static files from React build in production
+if (IS_PRODUCTION) {
+  app.use(express.static(path.join(__dirname, '../client/dist')))
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() })
 })
 
-// API Routes
-app.use('/api', apiRoutes)
+// Initialize Socket.IO handlers for polling
+const activePolls = new Map()
 
-// Initialize Socket.IO handlers
-initializeSocketHandlers(io)
+io.on('connection', (socket) => {
+  console.log(`🔗 User connected: ${socket.id}`)
 
-// Basic route for testing
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Polling App API Server',
-    version: '1.0.0',
-    endpoints: {
-      'POST /api/poll': 'Create a new poll',
-      'POST /api/vote': 'Submit a vote',
-      'GET /api/results/:pollId': 'Get poll results',
-      'GET /api/polls/history': 'Get poll history',
-      'WebSocket /': 'Real-time chat and updates'
+  // Handle new poll creation
+  socket.on('createPoll', (pollData) => {
+    console.log('📊 New poll created:', pollData.question)
+    activePolls.set(pollData.id, pollData)
+    // Broadcast to all connected clients
+    socket.broadcast.emit('newPoll', pollData)
+  })
+
+  // Handle voting
+  socket.on('vote', (voteData) => {
+    console.log('🗳️ Vote received:', voteData)
+    const poll = activePolls.get(voteData.pollId)
+    if (poll) {
+      poll.votes = voteData.votes
+      activePolls.set(voteData.pollId, poll)
+      // Broadcast vote update to all clients
+      io.emit('voteUpdate', voteData)
     }
   })
+
+  // Handle poll ending
+  socket.on('endPoll', (pollId) => {
+    console.log('🛑 Poll ended:', pollId)
+    const poll = activePolls.get(pollId)
+    if (poll) {
+      poll.ended = true
+      activePolls.set(pollId, poll)
+      io.emit('pollEnded', pollId)
+    }
+  })
+
+  socket.on('disconnect', () => {
+    console.log(`👋 User disconnected: ${socket.id}`)
+  })
 })
+
+// Serve React app for all non-API routes in production
+if (IS_PRODUCTION) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'))
+  })
+} else {
+  // Basic route for testing in development
+  app.get('/', (req, res) => {
+    res.json({ 
+      message: 'Polling App API Server',
+      version: '1.0.0',
+      status: 'ready'
+    })
+  })
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -63,17 +107,17 @@ app.use((err, req, res, next) => {
   })
 })
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' })
-})
-
 const PORT = process.env.PORT || 5000
+
+// Force production mode for testing
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'development'
+}
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
-  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`🌐 Environment: ${process.env.NODE_ENV}`)
   console.log(`📊 Polling App API is ready!`)
+  console.log(`📁 Serving static files: ${IS_PRODUCTION ? 'YES' : 'NO'}`)
+  console.log(`📂 Static path: ${path.join(__dirname, '../client/dist')}`)
 })
-
-
