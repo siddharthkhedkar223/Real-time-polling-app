@@ -5,12 +5,12 @@ const cors = require('cors')
 const path = require('path')
 require('dotenv').config()
 
-// Force production mode for testing static file serving
-// Railway sets NODE_ENV=production automatically, but for testing locally we need to detect
-const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT
-
 const app = express()
 const server = http.createServer(app)
+
+// Production detection - Railway automatically sets NODE_ENV=production
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+
 const io = socketIo(server, {
   cors: {
     origin: IS_PRODUCTION 
@@ -109,15 +109,9 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000
 
-// Force production mode for testing
-if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = 'development'
-}
-
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
   console.log(`🌐 Environment: ${process.env.NODE_ENV}`)
   console.log(`📊 Polling App API is ready!`)
   console.log(`📁 Serving static files: ${IS_PRODUCTION ? 'YES' : 'NO'}`)
-  console.log(`📂 Static path: ${path.join(__dirname, '../client/dist')}`)
 })
