@@ -31,14 +31,32 @@ app.use(cors({
 }))
 app.use(express.json())
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📝 ${req.method} ${req.path}`)
+  next()
+})
+
 // Serve static files from React build in production
 if (IS_PRODUCTION) {
-  app.use(express.static(path.join(__dirname, '../client/dist')))
+  const staticPath = path.join(__dirname, '../client/dist')
+  console.log(`📂 Static files path: ${staticPath}`)
+  app.use(express.static(staticPath))
 }
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() })
+})
+
+// Railway health check endpoint
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() })
+})
+
+// Railway ping endpoint
+app.get('/ping', (req, res) => {
+  res.send('pong')
 })
 
 // Initialize Socket.IO handlers for polling
@@ -85,8 +103,19 @@ io.on('connection', (socket) => {
 
 // Serve React app for all non-API routes in production
 if (IS_PRODUCTION) {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'))
+  // Make sure static files are served first, then fallback to index.html
+  app.get('*', (req, res, next) => {
+    // If requesting a file extension, let express.static handle it
+    if (req.path.includes('.')) {
+      return next()
+    }
+    // Otherwise serve the React app
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'), (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err)
+        res.status(500).send('Error loading application')
+      }
+    })
   })
 } else {
   // Basic route for testing in development
@@ -110,7 +139,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`)
   console.log(`🌐 Environment: ${process.env.NODE_ENV}`)
   console.log(`📊 Polling App API is ready!`)
