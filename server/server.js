@@ -126,16 +126,72 @@ app.get('/', (req, res) => {
 
 // Initialize Socket.IO handlers for polling
 const activePolls = new Map()
+const connectedStudents = new Map() // Track connected students
+const chatMessages = [] // Store chat messages
 
 io.on('connection', (socket) => {
   console.log(`🔗 User connected: ${socket.id}`)
+
+  // Handle student joining
+  socket.on('joinAsStudent', (data) => {
+    console.log(`👨‍🎓 Student joined: ${data.name}`)
+    
+    // Store student info with socket
+    connectedStudents.set(socket.id, {
+      id: socket.id,
+      name: data.name,
+      joinedAt: new Date()
+    })
+    
+    // Send updated students list to all clients
+    const studentsList = Array.from(connectedStudents.values())
+    io.emit('studentsUpdate', studentsList)
+    
+    console.log(`📋 Current students: ${studentsList.map(s => s.name).join(', ')}`)
+  })
+
+  // Handle teacher joining
+  socket.on('joinAsTeacher', () => {
+    console.log(`👨‍🏫 Teacher joined`)
+    socket.isTeacher = true
+    
+    // Send current students list to teacher
+    const studentsList = Array.from(connectedStudents.values())
+    socket.emit('studentsUpdate', studentsList)
+  })
+
+  // Handle chat messages
+  socket.on('chatMessage', (message) => {
+    console.log(`💬 Chat message from ${message.sender}: ${message.text}`)
+    chatMessages.push(message)
+    
+    // Broadcast to all clients
+    io.emit('chatMessage', message)
+  })
+
+  // Handle kick student (teacher only)
+  socket.on('kickStudent', (data) => {
+    console.log(`🚫 Kicking student: ${data.studentName}`)
+    
+    // Find student by name and disconnect them
+    for (const [socketId, student] of connectedStudents.entries()) {
+      if (student.name === data.studentName) {
+        const studentSocket = io.sockets.sockets.get(socketId)
+        if (studentSocket) {
+          studentSocket.emit('kicked')
+          studentSocket.disconnect(true)
+        }
+        break
+      }
+    }
+  })
 
   // Handle new poll creation
   socket.on('createPoll', (pollData) => {
     console.log('📊 New poll created:', pollData.question)
     activePolls.set(pollData.id, pollData)
     // Broadcast to all connected clients
-    socket.broadcast.emit('newPoll', pollData)
+    io.emit('newPoll', pollData)
   })
 
   // Handle voting
@@ -143,10 +199,33 @@ io.on('connection', (socket) => {
     console.log('🗳️ Vote received:', voteData)
     const poll = activePolls.get(voteData.pollId)
     if (poll) {
-      poll.votes = voteData.votes
+      // Initialize votes object if it doesn't exist
+      if (!poll.votes) {
+        poll.votes = {}
+      }
+      if (!poll.voterNames) {
+        poll.voterNames = {}
+      }
+      
+      // Record the vote
+      if (!poll.votes[voteData.option]) {
+        poll.votes[voteData.option] = 0
+      }
+      poll.votes[voteData.option]++
+      
+      // Record voter name if available
+      const student = connectedStudents.get(socket.id)
+      if (student) {
+        if (!poll.voterNames[voteData.option]) {
+          poll.voterNames[voteData.option] = []
+        }
+        poll.voterNames[voteData.option].push(student.name)
+      }
+      
       activePolls.set(voteData.pollId, poll)
-      // Broadcast vote update to all clients
-      io.emit('voteUpdate', voteData)
+      
+      // Broadcast updated poll to all clients
+      io.emit('pollUpdate', poll)
     }
   })
 
@@ -163,6 +242,17 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`👋 User disconnected: ${socket.id}`)
+    
+    // Remove student from connected list if they were a student
+    if (connectedStudents.has(socket.id)) {
+      const student = connectedStudents.get(socket.id)
+      console.log(`👨‍🎓 Student left: ${student.name}`)
+      connectedStudents.delete(socket.id)
+      
+      // Send updated students list to remaining clients
+      const studentsList = Array.from(connectedStudents.values())
+      socket.broadcast.emit('studentsUpdate', studentsList)
+    }
   })
 })
 
