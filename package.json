@@ -4,13 +4,15 @@
   "description": "Real-time polling application with Socket.IO",
   "main": "server/server.js",
   "scripts": {
-    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "start": "cd server && npm start",
+    "start:prod": "cd server && set NODE_ENV=production && npm start",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd server && npm run dev",
     "client": "cd client && npm run dev",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install",
-    "build": "npm run install-all",
-    "railway-start": "npm run install-all && npm start"
+    "build-client": "cd client && npm run build",
+    "build": "npm run install-all && npm run build-client",
+    "railway-start": "npm run build && npm start"
   },
   "keywords": ["polling", "real-time", "socket.io", "react", "express"],
   "author": "Your Name",
