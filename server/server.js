@@ -39,9 +39,32 @@ app.use((req, res, next) => {
 
 // Serve static files from React build in production
 if (IS_PRODUCTION) {
-  const staticPath = path.join(__dirname, '../client/dist')
-  console.log(`📂 Static files path: ${staticPath}`)
-  app.use(express.static(staticPath))
+  const fs = require('fs')
+  
+  // Try multiple possible paths for Railway
+  const possiblePaths = [
+    path.join(__dirname, '../client/dist'),
+    path.join(__dirname, '../dist'),
+    path.join(process.cwd(), 'client/dist'),
+    path.join(process.cwd(), 'dist')
+  ]
+  
+  let staticPath = null
+  for (const testPath of possiblePaths) {
+    console.log(`� Testing path: ${testPath}`)
+    if (fs.existsSync(testPath)) {
+      staticPath = testPath
+      console.log(`✅ Found static files at: ${staticPath}`)
+      break
+    }
+  }
+  
+  if (staticPath) {
+    console.log(`📋 Files in static directory:`, fs.readdirSync(staticPath))
+    app.use(express.static(staticPath))
+  } else {
+    console.error(`❌ No static files found in any of these paths:`, possiblePaths)
+  }
 }
 
 // Health check endpoint
@@ -144,4 +167,18 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐 Environment: ${process.env.NODE_ENV}`)
   console.log(`📊 Polling App API is ready!`)
   console.log(`📁 Serving static files: ${IS_PRODUCTION ? 'YES' : 'NO'}`)
+  console.log(`📍 Server accessible at: http://0.0.0.0:${PORT}`)
+  
+  // Additional Railway debugging
+  if (IS_PRODUCTION) {
+    const staticPath = path.join(__dirname, '../client/dist')
+    const indexPath = path.join(staticPath, 'index.html')
+    const fs = require('fs')
+    console.log(`📂 Checking static files...`)
+    console.log(`📁 Static directory exists: ${fs.existsSync(staticPath)}`)
+    console.log(`📄 Index.html exists: ${fs.existsSync(indexPath)}`)
+    if (fs.existsSync(staticPath)) {
+      console.log(`📋 Files in dist:`, fs.readdirSync(staticPath))
+    }
+  }
 })
