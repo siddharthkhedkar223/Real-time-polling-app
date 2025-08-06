@@ -125,6 +125,15 @@ intervue_Assignment/
 ✅ Live connection status  
 ✅ Responsive design  
 
+<div style="display: flex; overflow-x: auto; gap: 10px; padding: 10px;">
+  <img src="./Screenshots/Screenshot from 2025-08-06 15-56-15.png" alt="Teacher Dashboard" width="300"/>
+  <img src="./Screenshots/Screenshot from 2025-08-06 15-56-24.png" alt="Student Portal" width="300"/>
+  <img src="./Screenshots/Screenshot from 2025-08-06 16-02-18.png" alt="Poll Results" width="300"/>
+   <img src="./Screenshots/Screenshot from 2025-08-06 16-03-37-1.png" alt="Poll Results" width="300"/>
+  <img src="./Screenshots/Screenshot from 2025-08-06 16-05-46.png" alt="Poll Results" width="300"/>
+
+</div>
+
 
 
 
